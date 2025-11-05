@@ -1,0 +1,34 @@
+name: Deploy to GitHub Pages
+
+# Run this workflow every time a new commit is pushed to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # Set the job key. The key is displayed as the job name
+  # when a job name is not provided
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Deploy to GitHub Pages
+        # The GITHUB_TOKEN is automatically created and provided by GitHub Actions.
+        # It has sufficient permissions to push to the repository.
+        # The gh-pages package uses this token to authenticate.
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          npm run deploy
