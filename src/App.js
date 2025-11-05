@@ -23,6 +23,7 @@ function App() {
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      console.log('Login successful:', tokenResponse);
       setToken(tokenResponse.access_token);
       try {
         const res = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -31,12 +32,17 @@ function App() {
           },
         });
         setUser(res.data);
+        console.log('User info fetched:', res.data);
       } catch (err) {
         console.error('Error fetching user info: ', err);
+        alert('사용자 정보를 가져오는데 실패했습니다.');
       }
     },
-    onError: (error) => console.error('Login Failed:', error),
-    scope: 'https://www.googleapis.com/auth/youtube.readonly', // Request access to YouTube data
+    onError: (error) => {
+      console.error('Login Failed:', error);
+      alert('로그인에 실패했습니다. Google OAuth 설정을 확인해주세요.');
+    },
+    scope: 'https://www.googleapis.com/auth/youtube.readonly',
   });
 
   const logout = () => {
@@ -46,28 +52,52 @@ function App() {
     // googleLogout(); // from @react-oauth/google
   };
 
-  // --- YouTube Player Logic (mostly unchanged) ---
+  // --- YouTube Player Logic with improved settings ---
   const opts = {
     height: '100%',
     width: '100%',
     playerVars: {
-      autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1,
-      rel: 0, showinfo: 0, iv_load_policy: 3, loop: 1,
+      autoplay: 1,
+      controls: 0,
+      disablekb: 1,
+      modestbranding: 1,
+      rel: 0,
+      showinfo: 0,
+      iv_load_policy: 3,
+      loop: 1,
       playlist: videoIds[currentVideoIndex],
+      origin: window.location.origin, // Add origin to match current domain
+      enablejsapi: 1, // Enable JavaScript API
+      fs: 0, // Disable fullscreen button
+      cc_load_policy: 0, // Don't show captions by default
     },
   };
 
   const onPlayerReady = (event) => {
     playerRef.current = event.target;
-    playerRef.current.playVideo();
-    setIsPlaying(true);
+    try {
+      playerRef.current.playVideo();
+      setIsPlaying(true);
+    } catch (error) {
+      console.warn('Player ready error (safe to ignore):', error);
+    }
   };
 
   const onPlayerStateChange = (event) => {
-    if (event.data === window.YT.PlayerState.ENDED) {
-      handleNextVideo();
+    try {
+      if (event.data === window.YT.PlayerState.ENDED) {
+        handleNextVideo();
+      }
+      setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
+    } catch (error) {
+      console.warn('Player state change error (safe to ignore):', error);
     }
-    setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
+  };
+
+  const onPlayerError = (event) => {
+    console.warn('YouTube player error:', event.data);
+    // Auto-skip to next video on error
+    handleNextVideo();
   };
 
   const handlePlayPause = () => {
@@ -93,6 +123,19 @@ function App() {
     }
   }, [user, token]);
 
+  // Filter out YouTube postMessage warnings in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const originalError = console.error;
+      console.error = (...args) => {
+        if (args[0]?.includes?.('postMessage') && args[0]?.includes?.('youtube.com')) {
+          return; // Suppress YouTube postMessage warnings
+        }
+        originalError.apply(console, args);
+      };
+    }
+  }, []);
+
   return (
     <div className="App">
       {user ? (
@@ -109,6 +152,7 @@ function App() {
               opts={opts}
               onReady={onPlayerReady}
               onStateChange={onPlayerStateChange}
+              onError={onPlayerError}
             />
           </div>
           <div className="controls">
