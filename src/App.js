@@ -11,7 +11,7 @@ function App() {
   const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('personalized');
   const [isAutoPlay, setIsAutoPlay] = useState(false);
-  const [autoPlayProgress, setAutoPlayProgress] = useState(0);
+
   const autoPlayTimerRef = useRef(null);
   const progressIntervalRef = useRef(null);
 
@@ -106,7 +106,6 @@ function App() {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    setAutoPlayProgress(0);
   }, []);
 
   const handleNextVideo = useCallback(() => {
@@ -134,7 +133,7 @@ function App() {
     } catch (error) {
       console.error('Next video error:', error);
     }
-  }, [currentVideoIndex, videoIds.length, clearAutoPlayTimer, isAutoPlay]);
+  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay]);
 
   const startAutoPlayTimer = useCallback(() => {
     clearAutoPlayTimer(); // Clear any existing timer
@@ -142,7 +141,6 @@ function App() {
       console.log('Auto-play enabled - waiting for video to end naturally');
       // Only show that auto-play is active, but don't start a countdown timer
       // The video will automatically move to next when it ends (state 0)
-      setAutoPlayProgress(0);
     }
   }, [isAutoPlay, clearAutoPlayTimer]);
 
@@ -229,7 +227,7 @@ function App() {
   }, [isAutoPlay, clearAutoPlayTimer]);
 
   // Function to fetch user's personalized shorts based on watch history and likes
-  const fetchPersonalizedShorts = async () => {
+  const fetchPersonalizedShorts = useCallback(async () => {
     if (!token) return;
     
     setIsLoadingVideos(true);
@@ -395,7 +393,7 @@ function App() {
     } finally {
       setIsLoadingVideos(false);
     }
-  };
+  }, [token]);
 
   // Helper function to parse YouTube duration format (PT1M30S -> 90 seconds)
   const parseDuration = (duration) => {
@@ -555,14 +553,14 @@ function App() {
       console.log('Logged in! Fetching personalized YouTube Shorts...');
       fetchPersonalizedShorts();
     }
-  }, [user, token]);
+  }, [user, token, fetchPersonalizedShorts]);
 
   // Cleanup auto-play timer on unmount
   useEffect(() => {
     return () => {
       clearAutoPlayTimer();
     };
-  }, []);
+  }, [clearAutoPlayTimer]);
 
   // Update auto-play timer when isAutoPlay changes
   useEffect(() => {
