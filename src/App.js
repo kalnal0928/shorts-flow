@@ -147,6 +147,13 @@ function App() {
     try {
       clearAutoPlayTimer(); // Clear any existing timer
       const nextIndex = (currentVideoIndex + 1) % videoIds.length;
+      
+      // 비디오 목록의 80%를 시청했으면 새로운 비디오 로드
+      if (nextIndex >= videoIds.length * 0.8 && user && token) {
+        console.log('Near end of video list, fetching more videos...');
+        fetchShortsByCategory(selectedCategory);
+      }
+      
       setCurrentVideoIndex(nextIndex);
       setVideoError(false); // Clear error state when switching videos
       setIsPlaying(false); // Reset playing state
@@ -168,7 +175,7 @@ function App() {
     } catch (error) {
       console.error('Next video error:', error);
     }
-  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay]);
+  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay, user, token, selectedCategory]);
 
   const startAutoPlayTimer = useCallback(() => {
     clearAutoPlayTimer(); // Clear any existing timer
@@ -322,8 +329,17 @@ function App() {
 
       if (allShorts.length > 0) {
         console.log('Found trending shorts:', allShorts.length);
-        setVideoIds(allShorts);
-        setCurrentVideoIndex(0);
+        setVideoIds(prevIds => {
+          if (prevIds.length <= 5) { // 기본 비디오만 있는 경우
+            setCurrentVideoIndex(0);
+            return allShorts;
+          } else {
+            // 기존 목록에 추가
+            const newIds = [...prevIds, ...allShorts];
+            const uniqueIds = [...new Set(newIds)];
+            return shuffleArray(uniqueIds.slice(-50));
+          }
+        });
       } else {
         console.log('No trending shorts found, keeping default videos');
       }
@@ -487,8 +503,18 @@ function App() {
 
       if (shortsVideoIds.length > 0) {
         console.log('Total personalized shorts found:', shortsVideoIds.length);
-        setVideoIds(shortsVideoIds);
-        setCurrentVideoIndex(0);
+        // 기존 비디오 목록에 새로운 비디오 추가
+        setVideoIds(prevIds => {
+          if (prevIds.length <= 5) { // 기본 비디오만 있는 경우
+            setCurrentVideoIndex(0);
+            return shortsVideoIds;
+          } else {
+            // 기존 목록에 추가
+            const newIds = [...prevIds, ...shortsVideoIds];
+            const uniqueIds = [...new Set(newIds)];
+            return shuffleArray(uniqueIds.slice(-50));
+          }
+        });
       } else {
         console.log('No personalized shorts found, using trending instead');
         await fetchTrendingShorts();
@@ -515,7 +541,7 @@ function App() {
   };
 
   // Function to fetch shorts by category
-  const fetchShortsByCategory = async (category) => {
+  const fetchShortsByCategory = useCallback(async (category) => {
     setIsLoadingVideos(true);
     setSelectedCategory(category);
     
@@ -573,15 +599,20 @@ function App() {
 
       if (categoryShorts.length > 0) {
         console.log(`Found ${category} shorts:`, categoryShorts.length);
-        setVideoIds(shuffleArray(categoryShorts));
-        setCurrentVideoIndex(0);
+        // 기존 비디오 목록에 새로운 비디오 추가 (중복 제거)
+        setVideoIds(prevIds => {
+          const newIds = [...prevIds, ...categoryShorts];
+          const uniqueIds = [...new Set(newIds)]; // 중복 제거
+          return shuffleArray(uniqueIds.slice(-50)); // 최근 50개만 유지
+        });
+        // 인덱스는 유지 (현재 시청 중인 비디오 계속 재생)
       }
     } catch (error) {
       console.error(`Error fetching ${category} shorts:`, error);
     } finally {
       setIsLoadingVideos(false);
     }
-  };
+  }, [fetchPersonalizedShorts]);
 
   useEffect(() => {
     if (user && token) {
@@ -776,11 +807,14 @@ function App() {
               {isAutoPlay ? '🔄 자동재생 ON' : '⏸️ 자동재생 OFF'}
             </button>
             <button 
-              onClick={() => fetchShortsByCategory(selectedCategory)} 
+              onClick={() => {
+                console.log('Manual refresh clicked for category:', selectedCategory);
+                fetchShortsByCategory(selectedCategory);
+              }} 
               disabled={isLoadingVideos}
               className="refresh-button"
             >
-              {isLoadingVideos ? '로딩 중...' : '🔄 새로고침'}
+              {isLoadingVideos ? '로딩 중...' : '🔄 더 많은 Shorts'}
             </button>
           </div>
         </>
