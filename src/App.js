@@ -226,6 +226,78 @@ function App() {
     }
   }, [isAutoPlay, clearAutoPlayTimer]);
 
+  // Helper function to shuffle array
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Fallback function to get trending shorts
+  const fetchTrendingShorts = useCallback(async () => {
+    try {
+      console.log('Fetching trending shorts...');
+      
+      // Try multiple search queries to get diverse shorts
+      const searchQueries = [
+        'shorts trending',
+        'youtube shorts viral',
+        'shorts funny',
+        'shorts music',
+        'shorts dance',
+        'shorts comedy'
+      ];
+
+      let allShorts = [];
+
+      for (const query of searchQueries) {
+        try {
+          const response = await axios.get(
+            'https://www.googleapis.com/youtube/v3/search',
+            {
+              params: {
+                part: 'snippet',
+                type: 'video',
+                order: 'viewCount',
+                maxResults: 5,
+                videoDuration: 'short',
+                q: query,
+                publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Last 7 days
+                key: process.env.REACT_APP_YOUTUBE_API_KEY,
+              },
+            }
+          );
+
+          const shorts = response.data.items
+            .map(item => item.id.videoId)
+            .filter(id => id);
+
+          allShorts = [...allShorts, ...shorts];
+        } catch (error) {
+          console.warn(`Error fetching shorts for query "${query}":`, error);
+        }
+      }
+
+      // Remove duplicates and shuffle
+      allShorts = [...new Set(allShorts)];
+      allShorts = shuffleArray(allShorts);
+
+      if (allShorts.length > 0) {
+        console.log('Found trending shorts:', allShorts.length);
+        setVideoIds(allShorts);
+        setCurrentVideoIndex(0);
+      } else {
+        console.log('No trending shorts found, keeping default videos');
+      }
+    } catch (error) {
+      console.error('Error fetching trending shorts:', error);
+      // Keep the default hardcoded videos as final fallback
+    }
+  }, []);
+
   // Function to fetch user's personalized shorts based on watch history and likes
   const fetchPersonalizedShorts = useCallback(async () => {
     if (!token) return;
@@ -406,78 +478,6 @@ function App() {
     
     return hours * 3600 + minutes * 60 + seconds;
   };
-
-  // Helper function to shuffle array
-  const shuffleArray = (array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
-  // Fallback function to get trending shorts
-  const fetchTrendingShorts = useCallback(async () => {
-    try {
-      console.log('Fetching trending shorts...');
-      
-      // Try multiple search queries to get diverse shorts
-      const searchQueries = [
-        'shorts trending',
-        'youtube shorts viral',
-        'shorts funny',
-        'shorts music',
-        'shorts dance',
-        'shorts comedy'
-      ];
-
-      let allShorts = [];
-
-      for (const query of searchQueries) {
-        try {
-          const response = await axios.get(
-            'https://www.googleapis.com/youtube/v3/search',
-            {
-              params: {
-                part: 'snippet',
-                type: 'video',
-                order: 'viewCount',
-                maxResults: 5,
-                videoDuration: 'short',
-                q: query,
-                publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Last 7 days
-                key: process.env.REACT_APP_YOUTUBE_API_KEY,
-              },
-            }
-          );
-
-          const shorts = response.data.items
-            .map(item => item.id.videoId)
-            .filter(id => id);
-
-          allShorts = [...allShorts, ...shorts];
-        } catch (error) {
-          console.warn(`Error fetching shorts for query "${query}":`, error);
-        }
-      }
-
-      // Remove duplicates and shuffle
-      allShorts = [...new Set(allShorts)];
-      allShorts = shuffleArray(allShorts);
-
-      if (allShorts.length > 0) {
-        console.log('Found trending shorts:', allShorts.length);
-        setVideoIds(allShorts);
-        setCurrentVideoIndex(0);
-      } else {
-        console.log('No trending shorts found, keeping default videos');
-      }
-    } catch (error) {
-      console.error('Error fetching trending shorts:', error);
-      // Keep the default hardcoded videos as final fallback
-    }
-  }, []);
 
   // Function to fetch shorts by category
   const fetchShortsByCategory = async (category) => {
