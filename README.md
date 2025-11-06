@@ -1,70 +1,110 @@
-# Getting Started with Create React App
+# Shorts Flow
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+개인화된 YouTube Shorts를 hands-free로 즐길 수 있는 웹 애플리케이션입니다.
 
-## Available Scripts
+## 🚀 기능
 
-In the project directory, you can run:
+- **Google OAuth 로그인**: YouTube 계정으로 안전한 로그인
+- **개인화된 추천**: 좋아요, 시청 기록, 구독 채널 기반 맞춤 Shorts
+- **카테고리별 탐색**: 트렌딩, 웃긴, 음악, 게임, 음식 등 다양한 카테고리
+- **자동 재생**: 영상이 끝나면 자동으로 다음 Shorts 재생
+- **반응형 디자인**: 모바일과 데스크톱 모두 지원
 
-### `npm start`
+## 🛠️ 기술 스택
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 19, JavaScript
+- **Styling**: CSS3
+- **API**: YouTube Data API v3, Google OAuth 2.0
+- **Deployment**: GitHub Pages, GitHub Actions
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📦 설치 및 실행
 
-### `npm test`
+### 1. 저장소 클론
+```bash
+git clone https://github.com/kalnal0928/shorts-flow.git
+cd shorts-flow
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 2. 의존성 설치
+```bash
+npm install
+```
 
-### `npm run build`
+### 3. 환경 변수 설정
+`.env` 파일을 생성하고 다음 내용을 추가하세요:
+```
+REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
+REACT_APP_YOUTUBE_API_KEY=your_youtube_api_key
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 4. 개발 서버 실행
+```bash
+npm start
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🔧 Google API 설정
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 1. Google Cloud Console 설정
+1. [Google Cloud Console](https://console.cloud.google.com/)에 접속
+2. 새 프로젝트 생성 또는 기존 프로젝트 선택
+3. **API 및 서비스 > 라이브러리**에서 다음 API 활성화:
+   - YouTube Data API v3
+   - Google+ API
 
-### `npm run eject`
+### 2. OAuth 2.0 클라이언트 ID 생성
+1. **API 및 서비스 > 사용자 인증 정보**
+2. **사용자 인증 정보 만들기 > OAuth 클라이언트 ID**
+3. 애플리케이션 유형: **웹 애플리케이션**
+4. 승인된 JavaScript 원본에 도메인 추가:
+   - `http://localhost:3000` (개발용)
+   - `https://kalnal0928.github.io` (배포용)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 3. YouTube API 키 생성
+1. **사용자 인증 정보 만들기 > API 키**
+2. 생성된 API 키를 `.env` 파일에 추가
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 🚀 배포
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+이 프로젝트는 GitHub Actions를 통해 자동으로 GitHub Pages에 배포됩니다.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 자동 배포 설정
+1. GitHub 저장소의 **Settings > Pages**
+2. Source를 **GitHub Actions**로 설정
+3. `main` 브랜치에 푸시하면 자동으로 배포됩니다
 
-## Learn More
+### 수동 배포
+```bash
+npm run build
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 📱 사용 방법
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. **로그인**: Google 계정으로 로그인
+2. **카테고리 선택**: 원하는 Shorts 카테고리 선택
+3. **자동 재생 활성화**: 🔄 자동재생 ON 버튼 클릭
+4. **재생 시작**: ▶ Play 버튼으로 첫 영상 시작
+5. **Hands-free 감상**: 영상이 끝나면 자동으로 다음 영상 재생
 
-### Code Splitting
+## 🎯 주요 특징
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- **진정한 Hands-free**: 영상이 자연스럽게 끝날 때까지 기다린 후 다음 영상 자동 재생
+- **개인화된 경험**: 사용자의 YouTube 활동 기반 맞춤 추천
+- **다양한 카테고리**: 트렌딩부터 특정 관심사까지 폭넓은 선택
+- **모바일 최적화**: 스마트폰에서도 완벽한 Shorts 경험
 
-### Analyzing the Bundle Size
+## 🤝 기여하기
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### Making a Progressive Web App
+## 📄 라이선스
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
 
-### Advanced Configuration
+## 🔗 링크
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- **Live Demo**: [https://kalnal0928.github.io/shorts-flow](https://kalnal0928.github.io/shorts-flow)
+- **GitHub Repository**: [https://github.com/kalnal0928/shorts-flow](https://github.com/kalnal0928/shorts-flow)
