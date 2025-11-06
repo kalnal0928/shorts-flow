@@ -98,6 +98,51 @@
   transform: none;
 }
 
+/* 검색 기능 스타일 */
+.search-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 0 20px;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 2px solid #444;
+  border-radius: 25px;
+  background-color: #333;
+  color: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #ff6b6b;
+}
+
+.search-input::placeholder {
+  color: #aaa;
+}
+
+.search-close {
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-close:hover {
+  background: #777;
+}
+
 /* Auto-play button styles */
 .autoplay-button {
   background-color: #666;
@@ -278,6 +323,46 @@
   
   .demo-info {
     font-size: 9px !important;
+  }
+
+  /* 모바일에서 컨트롤 버튼들 크기 조정 */
+  .controls {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .controls button {
+    padding: 12px 16px;
+    font-size: 14px;
+    min-height: 44px;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .autoplay-button {
+    min-width: 140px;
+  }
+
+  /* 카테고리 선택 버튼들도 모바일 최적화 */
+  .category-selector {
+    padding: 0 10px;
+  }
+
+  .category-selector button {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+
+  /* 모바일 검색 최적화 */
+  .search-container {
+    padding: 0 10px;
+  }
+
+  .search-input {
+    font-size: 16px; /* iOS에서 줌 방지 */
+    padding: 12px 15px;
   }
 }
 

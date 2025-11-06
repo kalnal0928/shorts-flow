@@ -24,6 +24,8 @@ function App() {
   const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('personalized');
   const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   const autoPlayTimerRef = useRef(null);
   const progressIntervalRef = useRef(null);
@@ -177,6 +179,9 @@ function App() {
         case 'sports':
           searchQuery = 'shorts sports football basketball';
           break;
+        case 'search':
+          searchQuery = `shorts ${searchQuery}`;
+          break;
         default:
           searchQuery = 'shorts';
       }
@@ -220,15 +225,29 @@ function App() {
     }
   }, []);
 
+  // 검색 기능
+  const handleSearch = useCallback((query) => {
+    if (!query.trim()) return;
+    setSearchQuery(query.trim());
+    setSelectedCategory('search');
+    fetchShortsByCategory('search');
+  }, [fetchShortsByCategory]);
+
   const handleNextVideo = useCallback(() => {
     try {
       clearAutoPlayTimer(); // Clear any existing timer
       const nextIndex = (currentVideoIndex + 1) % videoIds.length;
       
-      // 비디오 목록의 80%를 시청했으면 새로운 비디오 로드
-      if (nextIndex >= videoIds.length * 0.8 && user && token) {
-        console.log('Near end of video list, fetching more videos...');
+      // 비디오 목록의 50%를 시청했으면 새로운 비디오 로드 (더 자주 로드)
+      if (nextIndex >= Math.max(5, videoIds.length * 0.5) && user && token) {
+        console.log('Halfway through video list, fetching more videos...');
         fetchShortsByCategory(selectedCategory);
+      }
+      
+      // 기본 비디오만 있는 경우 (로그인하지 않은 상태)에도 새로운 비디오 로드
+      if (videoIds.length <= 5 && nextIndex >= 3) {
+        console.log('Near end of default videos, fetching trending shorts...');
+        fetchShortsByCategory('trending');
       }
       
       setCurrentVideoIndex(nextIndex);
@@ -687,7 +706,37 @@ function App() {
               </div>
             )}
           </div>
+          {/* 검색 기능 */}
+          {showSearch && (
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="검색할 Shorts 키워드 입력..."
+                className="search-input"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch(e.target.value);
+                    setShowSearch(false);
+                  }
+                }}
+              />
+              <button 
+                onClick={() => setShowSearch(false)}
+                className="search-close"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="category-selector">
+            <button 
+              onClick={() => setShowSearch(!showSearch)}
+              className={selectedCategory === 'search' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              🔍 검색
+            </button>
             <button 
               onClick={() => fetchShortsByCategory('personalized')}
               className={selectedCategory === 'personalized' ? 'active' : ''}
