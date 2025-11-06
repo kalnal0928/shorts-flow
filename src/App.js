@@ -590,17 +590,16 @@ function App() {
           }
         });
       } else {
-        console.log('No personalized shorts found, using trending instead');
-        await fetchTrendingShorts();
+        console.log('No personalized shorts found, keeping default videos');
       }
 
     } catch (error) {
       console.error('Error fetching personalized shorts:', error);
-      await fetchTrendingShorts(); // Fallback to trending
+      console.log('Keeping default videos due to error')
     } finally {
       setIsLoadingVideos(false);
     }
-  }, [token, fetchTrendingShorts]);
+  }, [token]);
 
   // Helper function to parse YouTube duration format (PT1M30S -> 90 seconds)
   const parseDuration = (duration) => {
