@@ -28,7 +28,7 @@ function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [useYouTubeAlgorithm, setUseYouTubeAlgorithm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [realTimeMode, setRealTimeMode] = useState(true); // 실시간 추천 모드
+  const [realTimeMode] = useState(true); // 실시간 추천 모드 (현재 항상 활성화)
 
   const autoPlayTimerRef = useRef(null);
   const progressIntervalRef = useRef(null);
