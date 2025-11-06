@@ -5,6 +5,15 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
+  // Check environment variables on component mount
+  useEffect(() => {
+    console.log('Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      GOOGLE_CLIENT_ID: process.env.REACT_APP_GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
+      YOUTUBE_API_KEY: process.env.REACT_APP_YOUTUBE_API_KEY ? 'Set' : 'Missing'
+    });
+  }, []);
+
   const [user, setUser] = useState(null); // To store user profile
   const [token, setToken] = useState(null); // To store access token
   const [videoError, setVideoError] = useState(false);
@@ -583,9 +592,18 @@ function App() {
 
     // Global error handler for unhandled errors
     const handleGlobalError = (event) => {
-      console.error('Global error caught:', event.error);
-      // Prevent the error from bubbling up and causing the "Script error"
-      event.preventDefault();
+      console.error('Global error caught:', {
+        error: event.error,
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error?.stack
+      });
+      // Don't prevent default in development to see the actual error
+      if (process.env.NODE_ENV === 'production') {
+        event.preventDefault();
+      }
       return true;
     };
 
