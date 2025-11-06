@@ -26,6 +26,8 @@ function App() {
   const [isAutoPlay, setIsAutoPlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [useYouTubeAlgorithm, setUseYouTubeAlgorithm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const autoPlayTimerRef = useRef(null);
   const progressIntervalRef = useRef(null);
@@ -188,21 +190,47 @@ function App() {
 
       console.log(`Fetching ${category} shorts...`);
       
-      const response = await axios.get(
-        'https://www.googleapis.com/youtube/v3/search',
-        {
-          params: {
-            part: 'snippet',
-            type: 'video',
-            order: orderBy,
-            maxResults: 25,
-            videoDuration: 'short',
-            q: apiSearchQuery,
-            publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // Last 14 days
-            key: process.env.REACT_APP_YOUTUBE_API_KEY,
-          },
-        }
-      );
+      let response;
+      
+      if (useYouTubeAlgorithm && category !== 'search') {
+        // YouTube 알고리즘 방식: 더 다양한 검색어와 랜덤 시간 범위 사용
+        const randomDays = Math.floor(Math.random() * 30) + 1; // 1-30일 랜덤
+        const randomSearchTerms = apiSearchQuery.split(' ');
+        const randomTerm = randomSearchTerms[Math.floor(Math.random() * randomSearchTerms.length)];
+        
+        response = await axios.get(
+          'https://www.googleapis.com/youtube/v3/search',
+          {
+            params: {
+              part: 'snippet',
+              type: 'video',
+              order: Math.random() > 0.5 ? 'relevance' : 'viewCount', // 랜덤 정렬
+              maxResults: 25,
+              videoDuration: 'short',
+              q: `${randomTerm} shorts`,
+              publishedAfter: new Date(Date.now() - randomDays * 24 * 60 * 60 * 1000).toISOString(),
+              key: process.env.REACT_APP_YOUTUBE_API_KEY,
+            },
+          }
+        );
+      } else {
+        // 기본 방식
+        response = await axios.get(
+          'https://www.googleapis.com/youtube/v3/search',
+          {
+            params: {
+              part: 'snippet',
+              type: 'video',
+              order: orderBy,
+              maxResults: 25,
+              videoDuration: 'short',
+              q: apiSearchQuery,
+              publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+              key: process.env.REACT_APP_YOUTUBE_API_KEY,
+            },
+          }
+        );
+      }
 
       const categoryShorts = response.data.items
         .map(item => item.id.videoId)
@@ -223,7 +251,7 @@ function App() {
     } finally {
       setIsLoadingVideos(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, useYouTubeAlgorithm]);
 
   // 검색 기능
   const handleSearch = useCallback((query) => {
@@ -729,56 +757,125 @@ function App() {
             </div>
           )}
 
-          <div className="category-selector">
+          {/* 설정 패널 */}
+          {showSettings && (
+            <div className="settings-panel">
+              <div className="settings-header">
+                <h3>재생 설정</h3>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="settings-close"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="settings-option">
+                <label className="settings-label">
+                  <input
+                    type="checkbox"
+                    checked={useYouTubeAlgorithm}
+                    onChange={(e) => setUseYouTubeAlgorithm(e.target.checked)}
+                  />
+                  🤖 YouTube 알고리즘 추천 사용
+                </label>
+                <p className="settings-description">
+                  더 다양하고 예측 불가능한 Shorts를 추천받습니다
+                </p>
+              </div>
+
+              <div className="settings-categories">
+                <h4>카테고리 선택</h4>
+                <div className="category-grid">
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('personalized');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'personalized' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    👤 개인화
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('trending');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'trending' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    🔥 트렌딩
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('funny');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'funny' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    😂 웃긴
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('music');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'music' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    🎵 음악
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('gaming');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'gaming' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    🎮 게임
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetchShortsByCategory('food');
+                      setShowSettings(false);
+                    }}
+                    className={selectedCategory === 'food' ? 'active' : ''}
+                    disabled={isLoadingVideos}
+                  >
+                    🍔 음식
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 간단한 컨트롤 바 */}
+          <div className="quick-controls">
             <button 
               onClick={() => setShowSearch(!showSearch)}
               className={selectedCategory === 'search' ? 'active' : ''}
               disabled={isLoadingVideos}
             >
-              🔍 검색
+              🔍
             </button>
             <button 
-              onClick={() => fetchShortsByCategory('personalized')}
-              className={selectedCategory === 'personalized' ? 'active' : ''}
-              disabled={isLoadingVideos}
+              onClick={() => setShowSettings(!showSettings)}
+              className="settings-button"
             >
-              👤 개인화
+              ⚙️
             </button>
-            <button 
-              onClick={() => fetchShortsByCategory('trending')}
-              className={selectedCategory === 'trending' ? 'active' : ''}
-              disabled={isLoadingVideos}
-            >
-              🔥 트렌딩
-            </button>
-            <button 
-              onClick={() => fetchShortsByCategory('funny')}
-              className={selectedCategory === 'funny' ? 'active' : ''}
-              disabled={isLoadingVideos}
-            >
-              😂 웃긴
-            </button>
-            <button 
-              onClick={() => fetchShortsByCategory('music')}
-              className={selectedCategory === 'music' ? 'active' : ''}
-              disabled={isLoadingVideos}
-            >
-              🎵 음악
-            </button>
-            <button 
-              onClick={() => fetchShortsByCategory('gaming')}
-              className={selectedCategory === 'gaming' ? 'active' : ''}
-              disabled={isLoadingVideos}
-            >
-              🎮 게임
-            </button>
-            <button 
-              onClick={() => fetchShortsByCategory('food')}
-              className={selectedCategory === 'food' ? 'active' : ''}
-              disabled={isLoadingVideos}
-            >
-              🍔 음식
-            </button>
+            <span className="current-category">
+              {selectedCategory === 'personalized' && '👤 개인화'}
+              {selectedCategory === 'trending' && '🔥 트렌딩'}
+              {selectedCategory === 'funny' && '😂 웃긴'}
+              {selectedCategory === 'music' && '🎵 음악'}
+              {selectedCategory === 'gaming' && '🎮 게임'}
+              {selectedCategory === 'food' && '🍔 음식'}
+              {selectedCategory === 'search' && '🔍 검색'}
+            </span>
           </div>
           
           <div className="controls">
