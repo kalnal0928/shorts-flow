@@ -151,7 +151,7 @@ function App() {
     setSelectedCategory(category);
     
     try {
-      let searchQuery = '';
+      let apiSearchQuery = '';
       let orderBy = 'viewCount';
       
       switch (category) {
@@ -162,28 +162,28 @@ function App() {
           setIsLoadingVideos(false);
           return;
         case 'trending':
-          searchQuery = 'shorts trending viral';
+          apiSearchQuery = 'shorts trending viral';
           break;
         case 'funny':
-          searchQuery = 'shorts funny comedy meme';
+          apiSearchQuery = 'shorts funny comedy meme';
           break;
         case 'music':
-          searchQuery = 'shorts music dance kpop';
+          apiSearchQuery = 'shorts music dance kpop';
           break;
         case 'gaming':
-          searchQuery = 'shorts gaming gameplay';
+          apiSearchQuery = 'shorts gaming gameplay';
           break;
         case 'food':
-          searchQuery = 'shorts food cooking recipe';
+          apiSearchQuery = 'shorts food cooking recipe';
           break;
         case 'sports':
-          searchQuery = 'shorts sports football basketball';
+          apiSearchQuery = 'shorts sports football basketball';
           break;
         case 'search':
-          searchQuery = `shorts ${searchQuery}`;
+          apiSearchQuery = `shorts ${searchQuery}`;
           break;
         default:
-          searchQuery = 'shorts';
+          apiSearchQuery = 'shorts';
       }
 
       console.log(`Fetching ${category} shorts...`);
@@ -197,7 +197,7 @@ function App() {
             order: orderBy,
             maxResults: 25,
             videoDuration: 'short',
-            q: searchQuery,
+            q: apiSearchQuery,
             publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // Last 14 days
             key: process.env.REACT_APP_YOUTUBE_API_KEY,
           },
@@ -223,7 +223,7 @@ function App() {
     } finally {
       setIsLoadingVideos(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   // 검색 기능
   const handleSearch = useCallback((query) => {
