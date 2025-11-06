@@ -10,9 +10,13 @@ function App() {
     console.log('Environment check:', {
       NODE_ENV: process.env.NODE_ENV,
       GOOGLE_CLIENT_ID: process.env.REACT_APP_GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
-      YOUTUBE_API_KEY: process.env.REACT_APP_YOUTUBE_API_KEY ? 'Set' : 'Missing'
+      YOUTUBE_API_KEY: process.env.REACT_APP_YOUTUBE_API_KEY ? 'Set' : 'Missing',
+      IS_MOBILE: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     });
   }, []);
+
+  // 모바일 감지
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   const [user, setUser] = useState(null); // To store user profile
   const [token, setToken] = useState(null); // To store access token
@@ -37,6 +41,41 @@ function App() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef(null);
+
+  // 모바일용 리다이렉트 로그인
+  const loginWithRedirect = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      console.log('Redirect login successful:', tokenResponse);
+      setToken(tokenResponse.access_token);
+      try {
+        const res = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        });
+        
+        const allowedUsers = ['kalnal0928@gmail.com'];
+        
+        if (!allowedUsers.includes(res.data.email)) {
+          alert('이 앱은 개인용입니다. 접근 권한이 없습니다.');
+          return;
+        }
+        
+        setUser(res.data);
+        console.log('User info fetched:', res.data);
+      } catch (err) {
+        console.error('Error fetching user info: ', err);
+        alert('사용자 정보를 가져오는데 실패했습니다.');
+      }
+    },
+    onError: (error) => {
+      console.error('Redirect Login Failed:', error);
+      alert('로그인에 실패했습니다. 다시 시도해주세요.');
+    },
+    scope: 'https://www.googleapis.com/auth/youtube.readonly',
+    flow: 'auth-code',
+    redirect_uri: window.location.origin + '/shorts-flow',
+  });
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -69,12 +108,18 @@ function App() {
     onError: (error) => {
       console.error('Login Failed:', error);
       if (error.error === 'popup_closed_by_user') {
-        // User closed the popup, don't show error
         return;
       }
-      alert('로그인에 실패했습니다. 팝업이 차단되었거나 네트워크 문제일 수 있습니다. 다시 시도해주세요.');
+      // 모바일에서 더 친화적인 에러 메시지
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        alert('모바일에서 로그인 문제가 발생했습니다. 브라우저 설정에서 팝업을 허용하거나 다른 브라우저를 시도해보세요.');
+      } else {
+        alert('로그인에 실패했습니다. 팝업이 차단되었거나 네트워크 문제일 수 있습니다. 다시 시도해주세요.');
+      }
     },
     scope: 'https://www.googleapis.com/auth/youtube.readonly',
+    flow: 'auth-code', // 모바일에서 더 안정적인 방식
   });
 
   const logout = () => {
@@ -645,10 +690,25 @@ function App() {
           {!user && (
             <div className="demo-notice">
               <p>🎬 데모 모드 - 기본 비디오 시청 중</p>
-              <button onClick={() => login()} className="login-button-small">
-                🔐 개인 계정으로 로그인
+              <button 
+                onClick={() => {
+                  if (isMobile) {
+                    // 모바일에서는 리다이렉트 방식 사용
+                    console.log('Using redirect login for mobile');
+                    loginWithRedirect();
+                  } else {
+                    // PC에서는 팝업 방식 사용
+                    login();
+                  }
+                }} 
+                className="login-button-small"
+              >
+                🔐 개인 계정으로 로그인 {isMobile && '(모바일)'}
               </button>
-              <p className="demo-info">개인용 앱입니다. 승인된 계정만 로그인 가능합니다.</p>
+              <p className="demo-info">
+                개인용 앱입니다. 승인된 계정만 로그인 가능합니다.
+                {isMobile && ' 모바일에서는 팝업 허용이 필요합니다.'}
+              </p>
             </div>
           )}
           <div className="video-container">

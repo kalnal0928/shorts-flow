@@ -257,6 +257,28 @@
   max-width: 300px;
 }
 
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .demo-notice {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    font-size: 12px;
+  }
+  
+  .login-button-small {
+    padding: 8px 12px;
+    font-size: 12px;
+    touch-action: manipulation; /* 모바일 터치 최적화 */
+  }
+  
+  .demo-info {
+    font-size: 9px !important;
+  }
+}
+
 .demo-notice p {
   margin: 0 0 10px 0;
   font-size: 12px;
