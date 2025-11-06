@@ -42,40 +42,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef(null);
 
-  // 모바일용 리다이렉트 로그인
-  const loginWithRedirect = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      console.log('Redirect login successful:', tokenResponse);
-      setToken(tokenResponse.access_token);
-      try {
-        const res = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        });
-        
-        const allowedUsers = ['kalnal0928@gmail.com'];
-        
-        if (!allowedUsers.includes(res.data.email)) {
-          alert('이 앱은 개인용입니다. 접근 권한이 없습니다.');
-          return;
-        }
-        
-        setUser(res.data);
-        console.log('User info fetched:', res.data);
-      } catch (err) {
-        console.error('Error fetching user info: ', err);
-        alert('사용자 정보를 가져오는데 실패했습니다.');
-      }
-    },
-    onError: (error) => {
-      console.error('Redirect Login Failed:', error);
-      alert('로그인에 실패했습니다. 다시 시도해주세요.');
-    },
-    scope: 'https://www.googleapis.com/auth/youtube.readonly',
-    flow: 'auth-code',
-    redirect_uri: window.location.origin + '/shorts-flow',
-  });
+
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -118,8 +85,7 @@ function App() {
         alert('로그인에 실패했습니다. 팝업이 차단되었거나 네트워크 문제일 수 있습니다. 다시 시도해주세요.');
       }
     },
-    scope: 'https://www.googleapis.com/auth/youtube.readonly',
-    flow: 'auth-code', // 모바일에서 더 안정적인 방식
+    scope: 'https://www.googleapis.com/auth/youtube.readonly'
   });
 
   const logout = () => {
@@ -692,22 +658,35 @@ function App() {
               <p>🎬 데모 모드 - 기본 비디오 시청 중</p>
               <button 
                 onClick={() => {
-                  if (isMobile) {
-                    // 모바일에서는 리다이렉트 방식 사용
-                    console.log('Using redirect login for mobile');
-                    loginWithRedirect();
-                  } else {
-                    // PC에서는 팝업 방식 사용
-                    login();
+                  console.log('Login button clicked, isMobile:', isMobile);
+                  try {
+                    if (isMobile) {
+                      console.log('Mobile login attempt');
+                      // 모바일에서도 기본 팝업 방식 시도
+                      login();
+                    } else {
+                      console.log('Desktop login attempt');
+                      login();
+                    }
+                  } catch (error) {
+                    console.error('Login click error:', error);
+                    alert('로그인 버튼 클릭 중 오류가 발생했습니다: ' + error.message);
                   }
                 }} 
                 className="login-button-small"
               >
-                🔐 개인 계정으로 로그인 {isMobile && '(모바일)'}
+                {isMobile ? '📱 모바일 로그인' : '🔐 개인 계정으로 로그인'}
               </button>
               <p className="demo-info">
                 개인용 앱입니다. 승인된 계정만 로그인 가능합니다.
-                {isMobile && ' 모바일에서는 팝업 허용이 필요합니다.'}
+                {isMobile && (
+                  <>
+                    <br />
+                    <strong>모바일 사용 시:</strong> 팝업 차단 해제 필요
+                    <br />
+                    <small>Chrome: 주소창 왼쪽 🚫 아이콘 클릭 → 팝업 허용</small>
+                  </>
+                )}
               </p>
             </div>
           )}

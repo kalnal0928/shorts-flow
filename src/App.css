@@ -269,9 +269,11 @@
   }
   
   .login-button-small {
-    padding: 8px 12px;
-    font-size: 12px;
-    touch-action: manipulation; /* 모바일 터치 최적화 */
+    padding: 12px 16px;
+    font-size: 14px;
+    touch-action: manipulation;
+    min-height: 44px; /* iOS 권장 터치 타겟 크기 */
+    min-width: 44px;
   }
   
   .demo-info {
@@ -300,10 +302,18 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 11px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .login-button-small:hover {
   background: #357ae8;
+}
+
+.login-button-small:active {
+  background: #2c5aa0;
+  transform: scale(0.98);
 }
 
 /* Loading styles */
