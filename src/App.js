@@ -143,6 +143,80 @@ function App() {
     }
   }, []);
 
+  // Function to fetch shorts by category
+  const fetchShortsByCategory = useCallback(async (category) => {
+    setIsLoadingVideos(true);
+    setSelectedCategory(category);
+    
+    try {
+      let searchQuery = '';
+      let orderBy = 'viewCount';
+      
+      switch (category) {
+        case 'personalized':
+          await fetchPersonalizedShorts();
+          return;
+        case 'trending':
+          searchQuery = 'shorts trending viral';
+          break;
+        case 'funny':
+          searchQuery = 'shorts funny comedy meme';
+          break;
+        case 'music':
+          searchQuery = 'shorts music dance kpop';
+          break;
+        case 'gaming':
+          searchQuery = 'shorts gaming gameplay';
+          break;
+        case 'food':
+          searchQuery = 'shorts food cooking recipe';
+          break;
+        case 'sports':
+          searchQuery = 'shorts sports football basketball';
+          break;
+        default:
+          searchQuery = 'shorts';
+      }
+
+      console.log(`Fetching ${category} shorts...`);
+      
+      const response = await axios.get(
+        'https://www.googleapis.com/youtube/v3/search',
+        {
+          params: {
+            part: 'snippet',
+            type: 'video',
+            order: orderBy,
+            maxResults: 25,
+            videoDuration: 'short',
+            q: searchQuery,
+            publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // Last 14 days
+            key: process.env.REACT_APP_YOUTUBE_API_KEY,
+          },
+        }
+      );
+
+      const categoryShorts = response.data.items
+        .map(item => item.id.videoId)
+        .filter(id => id);
+
+      if (categoryShorts.length > 0) {
+        console.log(`Found ${category} shorts:`, categoryShorts.length);
+        // 기존 비디오 목록에 새로운 비디오 추가 (중복 제거)
+        setVideoIds(prevIds => {
+          const newIds = [...prevIds, ...categoryShorts];
+          const uniqueIds = [...new Set(newIds)]; // 중복 제거
+          return shuffleArray(uniqueIds.slice(-50)); // 최근 50개만 유지
+        });
+        // 인덱스는 유지 (현재 시청 중인 비디오 계속 재생)
+      }
+    } catch (error) {
+      console.error(`Error fetching ${category} shorts:`, error);
+    } finally {
+      setIsLoadingVideos(false);
+    }
+  }, [fetchPersonalizedShorts]);
+
   const handleNextVideo = useCallback(() => {
     try {
       clearAutoPlayTimer(); // Clear any existing timer
@@ -540,79 +614,7 @@ function App() {
     return hours * 3600 + minutes * 60 + seconds;
   };
 
-  // Function to fetch shorts by category
-  const fetchShortsByCategory = useCallback(async (category) => {
-    setIsLoadingVideos(true);
-    setSelectedCategory(category);
-    
-    try {
-      let searchQuery = '';
-      let orderBy = 'viewCount';
-      
-      switch (category) {
-        case 'personalized':
-          await fetchPersonalizedShorts();
-          return;
-        case 'trending':
-          searchQuery = 'shorts trending viral';
-          break;
-        case 'funny':
-          searchQuery = 'shorts funny comedy meme';
-          break;
-        case 'music':
-          searchQuery = 'shorts music dance kpop';
-          break;
-        case 'gaming':
-          searchQuery = 'shorts gaming gameplay';
-          break;
-        case 'food':
-          searchQuery = 'shorts food cooking recipe';
-          break;
-        case 'sports':
-          searchQuery = 'shorts sports football basketball';
-          break;
-        default:
-          searchQuery = 'shorts';
-      }
 
-      console.log(`Fetching ${category} shorts...`);
-      
-      const response = await axios.get(
-        'https://www.googleapis.com/youtube/v3/search',
-        {
-          params: {
-            part: 'snippet',
-            type: 'video',
-            order: orderBy,
-            maxResults: 25,
-            videoDuration: 'short',
-            q: searchQuery,
-            publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // Last 14 days
-            key: process.env.REACT_APP_YOUTUBE_API_KEY,
-          },
-        }
-      );
-
-      const categoryShorts = response.data.items
-        .map(item => item.id.videoId)
-        .filter(id => id);
-
-      if (categoryShorts.length > 0) {
-        console.log(`Found ${category} shorts:`, categoryShorts.length);
-        // 기존 비디오 목록에 새로운 비디오 추가 (중복 제거)
-        setVideoIds(prevIds => {
-          const newIds = [...prevIds, ...categoryShorts];
-          const uniqueIds = [...new Set(newIds)]; // 중복 제거
-          return shuffleArray(uniqueIds.slice(-50)); // 최근 50개만 유지
-        });
-        // 인덱스는 유지 (현재 시청 중인 비디오 계속 재생)
-      }
-    } catch (error) {
-      console.error(`Error fetching ${category} shorts:`, error);
-    } finally {
-      setIsLoadingVideos(false);
-    }
-  }, [fetchPersonalizedShorts]);
 
   useEffect(() => {
     if (user && token) {
