@@ -48,6 +48,17 @@ function App() {
             Authorization: `Bearer ${tokenResponse.access_token}`,
           },
         });
+        
+        // 허용된 사용자 이메일 목록 (본인 이메일로 수정하세요)
+        const allowedUsers = [
+          'kalnal0928@gmail.com'  // 본인 이메일로 변경하세요
+        ];
+        
+        if (!allowedUsers.includes(res.data.email)) {
+          alert('이 앱은 개인용입니다. 접근 권한이 없습니다.');
+          return;
+        }
+        
         setUser(res.data);
         console.log('User info fetched:', res.data);
       } catch (err) {
@@ -57,7 +68,11 @@ function App() {
     },
     onError: (error) => {
       console.error('Login Failed:', error);
-      alert('로그인에 실패했습니다. Google OAuth 설정을 확인해주세요.');
+      if (error.error === 'popup_closed_by_user') {
+        // User closed the popup, don't show error
+        return;
+      }
+      alert('로그인에 실패했습니다. 팝업이 차단되었거나 네트워크 문제일 수 있습니다. 다시 시도해주세요.');
     },
     scope: 'https://www.googleapis.com/auth/youtube.readonly',
   });
@@ -616,14 +631,26 @@ function App() {
 
   return (
     <div className="App">
-      {user ? (
-        // --- Logged-in View ---
+      {/* Show default videos even without login for demo purposes */}
+      {user || true ? (
+        // --- Logged-in View or Demo View ---
         <>
-          <div className="user-profile">
-            <img src={user.picture} alt={user.name} />
-            <span>Welcome, {user.given_name || user.name}</span>
-            <button onClick={logout} className="logout-button">Logout</button>
-          </div>
+          {user && (
+            <div className="user-profile">
+              <img src={user.picture} alt={user.name} />
+              <span>Welcome, {user.given_name || user.name}</span>
+              <button onClick={logout} className="logout-button">Logout</button>
+            </div>
+          )}
+          {!user && (
+            <div className="demo-notice">
+              <p>🎬 데모 모드 - 기본 비디오 시청 중</p>
+              <button onClick={() => login()} className="login-button-small">
+                🔐 개인 계정으로 로그인
+              </button>
+              <p className="demo-info">개인용 앱입니다. 승인된 계정만 로그인 가능합니다.</p>
+            </div>
+          )}
           <div className="video-container">
             {isLoadingVideos ? (
               <div className="loading">

@@ -92,6 +92,25 @@ npm run build
 - **다양한 카테고리**: 트렌딩부터 특정 관심사까지 폭넓은 선택
 - **모바일 최적화**: 스마트폰에서도 완벽한 Shorts 경험
 
+## 🔧 개인용 설정 방법
+
+### Google Cloud Console 설정
+1. **OAuth 동의 화면**을 **"테스트"** 모드로 유지
+2. **테스트 사용자**에 본인 이메일 추가
+3. YouTube Data API v3 활성화
+4. OAuth 클라이언트 ID의 승인된 JavaScript 원본에 `https://kalnal0928.github.io` 추가
+
+### 코드 수정
+1. `src/App.js`의 `allowedUsers` 배열에 본인 이메일 추가
+2. GitHub Repository Variables에 API 키 설정
+
+### 배포
+```bash
+git add .
+git commit -m "Configure for personal use"
+git push origin main
+```
+
 ## 🤝 기여하기
 
 1. Fork the Project
@@ -106,5 +125,20 @@ npm run build
 
 ## 🔗 링크
 
-- **Live Demo**: [https://kalnal0928.github.io/shorts-flow](https://kalnal0928.github.io/shorts-flow)
-- **GitHub Repository**: [https://github.com/kalnal0928/shorts-flow](https://github.com/kalnal0928/shorts-flow)
+- **🌐 Live Demo**: [https://kalnal0928.github.io/shorts-flow](https://kalnal0928.github.io/shorts-flow)
+- **📁 GitHub Repository**: [https://github.com/kalnal0928/shorts-flow](https://github.com/kalnal0928/shorts-flow)
+- **📋 배포 가이드**: [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## 🎯 사용자 가이드
+
+### 데모 모드 (누구나 사용 가능)
+- **기본 비디오**: 로그인 없이 기본 비디오 5개 시청 가능
+- **자동 재생**: hands-free 시청 경험
+- **수동 제어**: Play/Pause, Next 버튼
+
+### 개인화 기능 (승인된 계정만)
+- **Google 로그인**: 테스트 사용자로 등록된 계정만 로그인 가능
+- **맞춤 추천**: 좋아요, 구독 채널, 시청 기록 기반 추천
+- **카테고리 탐색**: 트렌딩, 웃긴, 음악, 게임, 음식 등
+
+> **참고**: 이 앱은 개인용으로 제작되었으며, Google OAuth 테스트 모드로 운영됩니다.

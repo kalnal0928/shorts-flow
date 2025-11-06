@@ -243,6 +243,47 @@
   background: #777;
 }
 
+/* Demo mode styles */
+.demo-notice {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background-color: rgba(255, 193, 7, 0.9);
+  color: #212529;
+  padding: 10px 15px;
+  border-radius: 10px;
+  z-index: 10;
+  text-align: center;
+  max-width: 300px;
+}
+
+.demo-notice p {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.demo-info {
+  font-size: 10px !important;
+  font-weight: normal !important;
+  color: #6c757d !important;
+  margin-top: 5px !important;
+}
+
+.login-button-small {
+  background: #4285F4;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.login-button-small:hover {
+  background: #357ae8;
+}
+
 /* Loading styles */
 .loading {
   display: flex;
