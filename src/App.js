@@ -393,7 +393,7 @@ function App() {
     } finally {
       setIsLoadingVideos(false);
     }
-  }, [token]);
+  }, [token, fetchTrendingShorts]);
 
   // Helper function to parse YouTube duration format (PT1M30S -> 90 seconds)
   const parseDuration = (duration) => {
@@ -418,7 +418,7 @@ function App() {
   };
 
   // Fallback function to get trending shorts
-  const fetchTrendingShorts = async () => {
+  const fetchTrendingShorts = useCallback(async () => {
     try {
       console.log('Fetching trending shorts...');
       
@@ -477,7 +477,7 @@ function App() {
       console.error('Error fetching trending shorts:', error);
       // Keep the default hardcoded videos as final fallback
     }
-  };
+  }, []);
 
   // Function to fetch shorts by category
   const fetchShortsByCategory = async (category) => {
