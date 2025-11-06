@@ -154,7 +154,10 @@ function App() {
       
       switch (category) {
         case 'personalized':
-          await fetchPersonalizedShorts();
+          // 개인화된 Shorts는 로그인 시에만 자동으로 로드되므로
+          // 여기서는 기본 비디오를 유지하고 사용자에게 안내
+          console.log('Personalized shorts require login and are loaded automatically');
+          setIsLoadingVideos(false);
           return;
         case 'trending':
           searchQuery = 'shorts trending viral';
@@ -215,7 +218,7 @@ function App() {
     } finally {
       setIsLoadingVideos(false);
     }
-  }, [fetchPersonalizedShorts]);
+  }, []);
 
   const handleNextVideo = useCallback(() => {
     try {
@@ -352,76 +355,7 @@ function App() {
     return shuffled;
   };
 
-  // Fallback function to get trending shorts
-  const fetchTrendingShorts = useCallback(async () => {
-    try {
-      console.log('Fetching trending shorts...');
-      
-      // Try multiple search queries to get diverse shorts
-      const searchQueries = [
-        'shorts trending',
-        'youtube shorts viral',
-        'shorts funny',
-        'shorts music',
-        'shorts dance',
-        'shorts comedy'
-      ];
 
-      let allShorts = [];
-
-      for (const query of searchQueries) {
-        try {
-          const response = await axios.get(
-            'https://www.googleapis.com/youtube/v3/search',
-            {
-              params: {
-                part: 'snippet',
-                type: 'video',
-                order: 'viewCount',
-                maxResults: 5,
-                videoDuration: 'short',
-                q: query,
-                publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Last 7 days
-                key: process.env.REACT_APP_YOUTUBE_API_KEY,
-              },
-            }
-          );
-
-          const shorts = response.data.items
-            .map(item => item.id.videoId)
-            .filter(id => id);
-
-          allShorts = [...allShorts, ...shorts];
-        } catch (error) {
-          console.warn(`Error fetching shorts for query "${query}":`, error);
-        }
-      }
-
-      // Remove duplicates and shuffle
-      allShorts = [...new Set(allShorts)];
-      allShorts = shuffleArray(allShorts);
-
-      if (allShorts.length > 0) {
-        console.log('Found trending shorts:', allShorts.length);
-        setVideoIds(prevIds => {
-          if (prevIds.length <= 5) { // 기본 비디오만 있는 경우
-            setCurrentVideoIndex(0);
-            return allShorts;
-          } else {
-            // 기존 목록에 추가
-            const newIds = [...prevIds, ...allShorts];
-            const uniqueIds = [...new Set(newIds)];
-            return shuffleArray(uniqueIds.slice(-50));
-          }
-        });
-      } else {
-        console.log('No trending shorts found, keeping default videos');
-      }
-    } catch (error) {
-      console.error('Error fetching trending shorts:', error);
-      // Keep the default hardcoded videos as final fallback
-    }
-  }, []);
 
   // Function to fetch user's personalized shorts based on watch history and likes
   const fetchPersonalizedShorts = useCallback(async () => {
