@@ -175,7 +175,7 @@ function App() {
     } catch (error) {
       console.error('Next video error:', error);
     }
-  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay, user, token, selectedCategory]);
+  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay, user, token, selectedCategory, fetchShortsByCategory]);
 
   const startAutoPlayTimer = useCallback(() => {
     clearAutoPlayTimer(); // Clear any existing timer
