@@ -28,6 +28,7 @@ function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [useYouTubeAlgorithm, setUseYouTubeAlgorithm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [realTimeMode, setRealTimeMode] = useState(true); // 실시간 추천 모드
 
   const autoPlayTimerRef = useRef(null);
   const progressIntervalRef = useRef(null);
@@ -253,6 +254,63 @@ function App() {
     }
   }, [searchQuery, useYouTubeAlgorithm]);
 
+  // 실시간 새로운 Shorts 가져오기
+  const fetchNextRealTimeShort = useCallback(async () => {
+    if (!realTimeMode) return null;
+    
+    try {
+      console.log('Fetching real-time next short...');
+      
+      // 다양한 검색 키워드 풀
+      const searchKeywords = [
+        'shorts viral', 'shorts trending', 'shorts funny', 'shorts music', 
+        'shorts dance', 'shorts comedy', 'shorts amazing', 'shorts cool',
+        'shorts wow', 'shorts epic', 'shorts cute', 'shorts awesome',
+        'shorts new', 'shorts popular', 'shorts best', 'shorts top'
+      ];
+      
+      // 랜덤 키워드 선택
+      const randomKeyword = searchKeywords[Math.floor(Math.random() * searchKeywords.length)];
+      
+      // 랜덤 시간 범위 (1-60일)
+      const randomDays = Math.floor(Math.random() * 60) + 1;
+      
+      // 랜덤 정렬 방식
+      const orderOptions = ['relevance', 'viewCount', 'date', 'rating'];
+      const randomOrder = orderOptions[Math.floor(Math.random() * orderOptions.length)];
+      
+      const response = await axios.get(
+        'https://www.googleapis.com/youtube/v3/search',
+        {
+          params: {
+            part: 'snippet',
+            type: 'video',
+            order: randomOrder,
+            maxResults: 10, // 더 적은 수로 더 자주 새로운 콘텐츠
+            videoDuration: 'short',
+            q: randomKeyword,
+            publishedAfter: new Date(Date.now() - randomDays * 24 * 60 * 60 * 1000).toISOString(),
+            key: process.env.REACT_APP_YOUTUBE_API_KEY,
+          },
+        }
+      );
+
+      const newShorts = response.data.items
+        .map(item => item.id.videoId)
+        .filter(id => id && !videoIds.includes(id)); // 중복 제거
+
+      if (newShorts.length > 0) {
+        console.log('Found new real-time shorts:', newShorts.length);
+        return shuffleArray(newShorts);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching real-time shorts:', error);
+      return null;
+    }
+  }, [realTimeMode, videoIds]);
+
   // 검색 기능
   const handleSearch = useCallback((query) => {
     if (!query.trim()) return;
@@ -261,45 +319,81 @@ function App() {
     fetchShortsByCategory('search');
   }, [fetchShortsByCategory]);
 
-  const handleNextVideo = useCallback(() => {
+  const handleNextVideo = useCallback(async () => {
     try {
       clearAutoPlayTimer(); // Clear any existing timer
+      
+      if (realTimeMode) {
+        // 실시간 모드: 매번 새로운 Shorts 가져오기
+        console.log('Real-time mode: fetching fresh shorts...');
+        const newShorts = await fetchNextRealTimeShort();
+        
+        if (newShorts && newShorts.length > 0) {
+          // 새로운 Shorts를 기존 목록에 추가
+          setVideoIds(prevIds => {
+            const updatedIds = [...prevIds, ...newShorts];
+            const uniqueIds = [...new Set(updatedIds)];
+            return uniqueIds.slice(-30); // 최근 30개만 유지
+          });
+          
+          // 새로 추가된 첫 번째 비디오로 이동
+          const nextIndex = videoIds.length;
+          setCurrentVideoIndex(nextIndex);
+          setVideoError(false);
+          setIsPlaying(false);
+          
+          if (playerRef.current && playerRef.current.loadVideoById) {
+            console.log('Loading real-time video:', newShorts[0]);
+            playerRef.current.loadVideoById(newShorts[0], 0);
+            
+            if (isAutoPlay) {
+              setTimeout(() => {
+                if (playerRef.current && playerRef.current.playVideo) {
+                  playerRef.current.playVideo();
+                }
+              }, 1000);
+            }
+          }
+          return;
+        }
+      }
+      
+      // 기본 모드: 기존 목록에서 다음 비디오
       const nextIndex = (currentVideoIndex + 1) % videoIds.length;
       
-      // 비디오 목록의 50%를 시청했으면 새로운 비디오 로드 (더 자주 로드)
+      // 비디오 목록의 50%를 시청했으면 새로운 비디오 로드
       if (nextIndex >= Math.max(5, videoIds.length * 0.5) && user && token) {
         console.log('Halfway through video list, fetching more videos...');
         fetchShortsByCategory(selectedCategory);
       }
       
-      // 기본 비디오만 있는 경우 (로그인하지 않은 상태)에도 새로운 비디오 로드
+      // 기본 비디오만 있는 경우에도 새로운 비디오 로드
       if (videoIds.length <= 5 && nextIndex >= 3) {
         console.log('Near end of default videos, fetching trending shorts...');
         fetchShortsByCategory('trending');
       }
       
       setCurrentVideoIndex(nextIndex);
-      setVideoError(false); // Clear error state when switching videos
-      setIsPlaying(false); // Reset playing state
+      setVideoError(false);
+      setIsPlaying(false);
       
       if (playerRef.current && playerRef.current.loadVideoById) {
         console.log('Loading next video:', videoIds[nextIndex]);
         playerRef.current.loadVideoById(videoIds[nextIndex], 0);
         
-        // If auto-play is enabled, start playing after a short delay
         if (isAutoPlay) {
           setTimeout(() => {
             if (playerRef.current && playerRef.current.playVideo) {
               console.log('Auto-playing next video');
               playerRef.current.playVideo();
             }
-          }, 1000); // Wait for video to load
+          }, 1000);
         }
       }
     } catch (error) {
       console.error('Next video error:', error);
     }
-  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay, user, token, selectedCategory, fetchShortsByCategory]);
+  }, [currentVideoIndex, videoIds, clearAutoPlayTimer, isAutoPlay, user, token, selectedCategory, fetchShortsByCategory, realTimeMode, fetchNextRealTimeShort]);
 
   const startAutoPlayTimer = useCallback(() => {
     clearAutoPlayTimer(); // Clear any existing timer
