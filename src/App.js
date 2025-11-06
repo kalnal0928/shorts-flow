@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import YouTube from 'react-youtube';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
@@ -7,14 +7,22 @@ import './App.css';
 function App() {
   const [user, setUser] = useState(null); // To store user profile
   const [token, setToken] = useState(null); // To store access token
+  const [videoError, setVideoError] = useState(false);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('personalized');
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [autoPlayProgress, setAutoPlayProgress] = useState(0);
+  const autoPlayTimerRef = useRef(null);
+  const progressIntervalRef = useRef(null);
 
   // Hardcoded list of YouTube Shorts video IDs (will be replaced by API call later)
+  // Using embed-friendly video IDs
   const [videoIds, setVideoIds] = useState([
-    '0aQjb7iR5d8',
-    'Mjj_KzW270U',
-    'y2A0P2j9j94',
-    'F_Bv1zN5b1o',
-    'yG4q-75sF4E',
+    'dQw4w9WgXcQ', // Rick Astley - Never Gonna Give You Up (known to work with embed)
+    'kJQP7kiw5Fk', // Luis Fonsi - Despacito (popular and embed-friendly)
+    'JGwWNGJdvx8', // Ed Sheeran - Shape of You
+    'fJ9rUzIMcZQ', // Queen - Bohemian Rhapsody
+    'YQHsXMglC9A', // Adele - Hello
   ]);
 
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -57,15 +65,12 @@ function App() {
     height: '100%',
     width: '100%',
     playerVars: {
-      autoplay: 1,
-      controls: 0,
+      autoplay: 0, // Start with autoplay off to avoid issues
+      controls: 1, // Enable controls for debugging
       disablekb: 1,
       modestbranding: 1,
       rel: 0,
-      showinfo: 0,
       iv_load_policy: 3,
-      loop: 1,
-      playlist: videoIds[currentVideoIndex],
       origin: window.location.origin, // Add origin to match current domain
       enablejsapi: 1, // Enable JavaScript API
       fs: 0, // Disable fullscreen button
@@ -73,57 +78,500 @@ function App() {
     },
   };
 
-  const onPlayerReady = (event) => {
+  const onPlayerReady = useCallback((event) => {
+    console.log('Player ready!');
     playerRef.current = event.target;
-    try {
-      playerRef.current.playVideo();
-      setIsPlaying(true);
-    } catch (error) {
-      console.warn('Player ready error (safe to ignore):', error);
+    setVideoError(false); // Clear any previous errors
+    
+    // If auto-play is enabled, automatically start playing the video
+    if (isAutoPlay) {
+      console.log('Auto-play is enabled, starting video automatically');
+      setTimeout(() => {
+        if (playerRef.current && playerRef.current.playVideo) {
+          playerRef.current.playVideo();
+        }
+      }, 500); // Small delay to ensure player is fully ready
+    } else {
+      setIsPlaying(false); // Start with paused state if auto-play is off
     }
-  };
+  }, [isAutoPlay]);
 
-  const onPlayerStateChange = (event) => {
+  // Auto-play timer functions - defined first to avoid dependency issues
+  const clearAutoPlayTimer = useCallback(() => {
+    if (autoPlayTimerRef.current) {
+      clearTimeout(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    setAutoPlayProgress(0);
+  }, []);
+
+  const handleNextVideo = useCallback(() => {
     try {
-      if (event.data === window.YT.PlayerState.ENDED) {
-        handleNextVideo();
+      clearAutoPlayTimer(); // Clear any existing timer
+      const nextIndex = (currentVideoIndex + 1) % videoIds.length;
+      setCurrentVideoIndex(nextIndex);
+      setVideoError(false); // Clear error state when switching videos
+      setIsPlaying(false); // Reset playing state
+      
+      if (playerRef.current && playerRef.current.loadVideoById) {
+        console.log('Loading next video:', videoIds[nextIndex]);
+        playerRef.current.loadVideoById(videoIds[nextIndex], 0);
+        
+        // If auto-play is enabled, start playing after a short delay
+        if (isAutoPlay) {
+          setTimeout(() => {
+            if (playerRef.current && playerRef.current.playVideo) {
+              console.log('Auto-playing next video');
+              playerRef.current.playVideo();
+            }
+          }, 1000); // Wait for video to load
+        }
       }
-      setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
     } catch (error) {
-      console.warn('Player state change error (safe to ignore):', error);
+      console.error('Next video error:', error);
     }
-  };
+  }, [currentVideoIndex, videoIds.length, clearAutoPlayTimer, isAutoPlay]);
 
-  const onPlayerError = (event) => {
-    console.warn('YouTube player error:', event.data);
-    // Auto-skip to next video on error
-    handleNextVideo();
-  };
+  const startAutoPlayTimer = useCallback(() => {
+    clearAutoPlayTimer(); // Clear any existing timer
+    if (isAutoPlay) {
+      console.log('Auto-play enabled - waiting for video to end naturally');
+      // Only show that auto-play is active, but don't start a countdown timer
+      // The video will automatically move to next when it ends (state 0)
+      setAutoPlayProgress(0);
+    }
+  }, [isAutoPlay, clearAutoPlayTimer]);
+
+  const onPlayerStateChange = useCallback((event) => {
+    console.log('Player state changed:', event.data);
+    // 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
+    
+    if (event.data === 0) { // ended
+      if (isAutoPlay) {
+        console.log('Video ended, auto-play enabled, moving to next video');
+        setTimeout(() => {
+          handleNextVideo();
+        }, 1000); // Small delay before moving to next video
+      } else {
+        console.log('Video ended, auto-play disabled');
+      }
+    } else if (event.data === 1) { // playing
+      setIsPlaying(true);
+      if (isAutoPlay) {
+        console.log('Video started playing, auto-play is enabled');
+        // Just indicate that auto-play is active, no timer needed
+        startAutoPlayTimer();
+      }
+    } else if (event.data === 2) { // paused
+      setIsPlaying(false);
+      console.log('Video paused');
+      clearAutoPlayTimer();
+    } else if (event.data === 5 && isAutoPlay) { // cued (video loaded and ready)
+      // If auto-play is enabled and video is cued, start playing
+      console.log('Video cued and auto-play enabled, starting playback');
+      setTimeout(() => {
+        if (playerRef.current && playerRef.current.playVideo) {
+          playerRef.current.playVideo();
+        }
+      }, 100);
+    }
+  }, [isAutoPlay, startAutoPlayTimer, clearAutoPlayTimer, handleNextVideo]);
+
+  const onPlayerError = useCallback((event) => {
+    console.error('YouTube player error:', event.data);
+    console.error('Current video ID:', videoIds[currentVideoIndex]);
+    setVideoError(true);
+    
+    // Error codes: 2 = invalid parameter, 5 = HTML5 player error, 
+    // 100 = video not found, 101/150 = embed not allowed
+    if (event.data === 150 || event.data === 101) {
+      console.error('Video embed not allowed, skipping to next video');
+    }
+    
+    // Add a small delay before skipping to prevent rapid cycling
+    setTimeout(() => {
+      handleNextVideo();
+    }, 1000);
+  }, [videoIds, currentVideoIndex, handleNextVideo]);
 
   const handlePlayPause = () => {
-    if (playerRef.current) {
-      isPlaying ? playerRef.current.pauseVideo() : playerRef.current.playVideo();
+    try {
+      if (playerRef.current && playerRef.current.playVideo && playerRef.current.pauseVideo) {
+        if (isPlaying) {
+          playerRef.current.pauseVideo();
+        } else {
+          playerRef.current.playVideo();
+        }
+      }
+    } catch (error) {
+      console.error('Play/Pause error:', error);
     }
   };
 
-  const handleNextVideo = () => {
-    const nextIndex = (currentVideoIndex + 1) % videoIds.length;
-    setCurrentVideoIndex(nextIndex);
-    if (playerRef.current) {
-      playerRef.current.loadVideoById(videoIds[nextIndex], 0);
+
+
+
+
+  const toggleAutoPlay = useCallback(() => {
+    const newAutoPlayState = !isAutoPlay;
+    setIsAutoPlay(newAutoPlayState);
+    
+    console.log('Auto-play', newAutoPlayState ? 'enabled' : 'disabled');
+    
+    if (!newAutoPlayState) {
+      // If turning off auto-play, clear any timers
+      clearAutoPlayTimer();
+    }
+  }, [isAutoPlay, clearAutoPlayTimer]);
+
+  // Function to fetch user's personalized shorts based on watch history and likes
+  const fetchPersonalizedShorts = async () => {
+    if (!token) return;
+    
+    setIsLoadingVideos(true);
+    try {
+      console.log('Fetching personalized shorts...');
+      
+      // Try multiple approaches to get personalized content
+      let shortsVideoIds = [];
+      
+      // 1. Try to get liked videos first (most personal)
+      try {
+        console.log('Fetching liked videos...');
+        const likedResponse = await axios.get(
+          'https://www.googleapis.com/youtube/v3/videos',
+          {
+            params: {
+              part: 'snippet,contentDetails',
+              myRating: 'like',
+              maxResults: 50,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const likedShorts = likedResponse.data.items
+          .filter(video => {
+            // Filter for shorts (duration < 60 seconds)
+            const duration = video.contentDetails.duration;
+            return duration && parseDuration(duration) <= 60;
+          })
+          .map(video => video.id);
+
+        if (likedShorts.length > 0) {
+          shortsVideoIds = [...shortsVideoIds, ...likedShorts];
+          console.log('Found liked shorts:', likedShorts.length);
+        }
+      } catch (error) {
+        console.warn('Could not fetch liked videos:', error);
+      }
+
+      // 2. Get watch history (if available)
+      try {
+        console.log('Fetching watch history...');
+        const historyResponse = await axios.get(
+          'https://www.googleapis.com/youtube/v3/activities',
+          {
+            params: {
+              part: 'snippet,contentDetails',
+              mine: true,
+              maxResults: 50,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const watchedVideos = historyResponse.data.items
+          .filter(activity => activity.snippet.type === 'upload')
+          .map(activity => activity.contentDetails?.upload?.videoId)
+          .filter(id => id);
+
+        if (watchedVideos.length > 0) {
+          // Get details for these videos to filter shorts
+          const videoDetailsResponse = await axios.get(
+            'https://www.googleapis.com/youtube/v3/videos',
+            {
+              params: {
+                part: 'contentDetails',
+                id: watchedVideos.slice(0, 20).join(','),
+                key: process.env.REACT_APP_YOUTUBE_API_KEY,
+              },
+            }
+          );
+
+          const historyShorts = videoDetailsResponse.data.items
+            .filter(video => {
+              const duration = video.contentDetails.duration;
+              return duration && parseDuration(duration) <= 60;
+            })
+            .map(video => video.id);
+
+          shortsVideoIds = [...shortsVideoIds, ...historyShorts];
+          console.log('Found shorts from history:', historyShorts.length);
+        }
+      } catch (error) {
+        console.warn('Could not fetch watch history:', error);
+      }
+
+      // 3. Get subscriptions and find their popular shorts
+      try {
+        console.log('Fetching subscriptions...');
+        const subscriptionsResponse = await axios.get(
+          'https://www.googleapis.com/youtube/v3/subscriptions',
+          {
+            params: {
+              part: 'snippet',
+              mine: true,
+              maxResults: 10,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const subscriptions = subscriptionsResponse.data.items;
+        
+        for (const subscription of subscriptions) {
+          try {
+            const channelId = subscription.snippet.resourceId.channelId;
+            
+            // Get popular shorts from subscribed channels
+            const searchResponse = await axios.get(
+              'https://www.googleapis.com/youtube/v3/search',
+              {
+                params: {
+                  part: 'snippet',
+                  channelId: channelId,
+                  type: 'video',
+                  order: 'viewCount', // Get popular videos
+                  maxResults: 3,
+                  videoDuration: 'short',
+                  publishedAfter: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // Last 30 days
+                  key: process.env.REACT_APP_YOUTUBE_API_KEY,
+                },
+              }
+            );
+
+            const channelShorts = searchResponse.data.items
+              .map(item => item.id.videoId)
+              .filter(id => id);
+
+            shortsVideoIds = [...shortsVideoIds, ...channelShorts];
+          } catch (error) {
+            console.warn('Error fetching videos for channel:', subscription.snippet.title);
+          }
+        }
+        
+        console.log('Found shorts from subscriptions:', subscriptions.length);
+      } catch (error) {
+        console.warn('Could not fetch subscriptions:', error);
+      }
+
+      // Remove duplicates and shuffle
+      shortsVideoIds = [...new Set(shortsVideoIds)];
+      shortsVideoIds = shuffleArray(shortsVideoIds);
+
+      if (shortsVideoIds.length > 0) {
+        console.log('Total personalized shorts found:', shortsVideoIds.length);
+        setVideoIds(shortsVideoIds);
+        setCurrentVideoIndex(0);
+      } else {
+        console.log('No personalized shorts found, using trending instead');
+        await fetchTrendingShorts();
+      }
+
+    } catch (error) {
+      console.error('Error fetching personalized shorts:', error);
+      await fetchTrendingShorts(); // Fallback to trending
+    } finally {
+      setIsLoadingVideos(false);
+    }
+  };
+
+  // Helper function to parse YouTube duration format (PT1M30S -> 90 seconds)
+  const parseDuration = (duration) => {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    
+    const hours = parseInt(match[1] || 0);
+    const minutes = parseInt(match[2] || 0);
+    const seconds = parseInt(match[3] || 0);
+    
+    return hours * 3600 + minutes * 60 + seconds;
+  };
+
+  // Helper function to shuffle array
+  const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Fallback function to get trending shorts
+  const fetchTrendingShorts = async () => {
+    try {
+      console.log('Fetching trending shorts...');
+      
+      // Try multiple search queries to get diverse shorts
+      const searchQueries = [
+        'shorts trending',
+        'youtube shorts viral',
+        'shorts funny',
+        'shorts music',
+        'shorts dance',
+        'shorts comedy'
+      ];
+
+      let allShorts = [];
+
+      for (const query of searchQueries) {
+        try {
+          const response = await axios.get(
+            'https://www.googleapis.com/youtube/v3/search',
+            {
+              params: {
+                part: 'snippet',
+                type: 'video',
+                order: 'viewCount',
+                maxResults: 5,
+                videoDuration: 'short',
+                q: query,
+                publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Last 7 days
+                key: process.env.REACT_APP_YOUTUBE_API_KEY,
+              },
+            }
+          );
+
+          const shorts = response.data.items
+            .map(item => item.id.videoId)
+            .filter(id => id);
+
+          allShorts = [...allShorts, ...shorts];
+        } catch (error) {
+          console.warn(`Error fetching shorts for query "${query}":`, error);
+        }
+      }
+
+      // Remove duplicates and shuffle
+      allShorts = [...new Set(allShorts)];
+      allShorts = shuffleArray(allShorts);
+
+      if (allShorts.length > 0) {
+        console.log('Found trending shorts:', allShorts.length);
+        setVideoIds(allShorts);
+        setCurrentVideoIndex(0);
+      } else {
+        console.log('No trending shorts found, keeping default videos');
+      }
+    } catch (error) {
+      console.error('Error fetching trending shorts:', error);
+      // Keep the default hardcoded videos as final fallback
+    }
+  };
+
+  // Function to fetch shorts by category
+  const fetchShortsByCategory = async (category) => {
+    setIsLoadingVideos(true);
+    setSelectedCategory(category);
+    
+    try {
+      let searchQuery = '';
+      let orderBy = 'viewCount';
+      
+      switch (category) {
+        case 'personalized':
+          await fetchPersonalizedShorts();
+          return;
+        case 'trending':
+          searchQuery = 'shorts trending viral';
+          break;
+        case 'funny':
+          searchQuery = 'shorts funny comedy meme';
+          break;
+        case 'music':
+          searchQuery = 'shorts music dance kpop';
+          break;
+        case 'gaming':
+          searchQuery = 'shorts gaming gameplay';
+          break;
+        case 'food':
+          searchQuery = 'shorts food cooking recipe';
+          break;
+        case 'sports':
+          searchQuery = 'shorts sports football basketball';
+          break;
+        default:
+          searchQuery = 'shorts';
+      }
+
+      console.log(`Fetching ${category} shorts...`);
+      
+      const response = await axios.get(
+        'https://www.googleapis.com/youtube/v3/search',
+        {
+          params: {
+            part: 'snippet',
+            type: 'video',
+            order: orderBy,
+            maxResults: 25,
+            videoDuration: 'short',
+            q: searchQuery,
+            publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // Last 14 days
+            key: process.env.REACT_APP_YOUTUBE_API_KEY,
+          },
+        }
+      );
+
+      const categoryShorts = response.data.items
+        .map(item => item.id.videoId)
+        .filter(id => id);
+
+      if (categoryShorts.length > 0) {
+        console.log(`Found ${category} shorts:`, categoryShorts.length);
+        setVideoIds(shuffleArray(categoryShorts));
+        setCurrentVideoIndex(0);
+      }
+    } catch (error) {
+      console.error(`Error fetching ${category} shorts:`, error);
+    } finally {
+      setIsLoadingVideos(false);
     }
   };
 
   useEffect(() => {
     if (user && token) {
-      // TODO: Fetch personalized shorts from YouTube API
-      console.log('Logged in! Ready to fetch YouTube data with token:', token);
-      // For now, we just use the hardcoded list.
-      // setVideoIds([]); // You might want to clear the default list
+      console.log('Logged in! Fetching personalized YouTube Shorts...');
+      fetchPersonalizedShorts();
     }
   }, [user, token]);
 
-  // Filter out YouTube postMessage warnings in development
+  // Cleanup auto-play timer on unmount
+  useEffect(() => {
+    return () => {
+      clearAutoPlayTimer();
+    };
+  }, []);
+
+  // Update auto-play timer when isAutoPlay changes
+  useEffect(() => {
+    if (!isAutoPlay) {
+      clearAutoPlayTimer();
+    }
+  }, [isAutoPlay, clearAutoPlayTimer]);
+
+  // Filter out YouTube postMessage warnings in development and add error handling
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const originalError = console.error;
@@ -134,6 +582,20 @@ function App() {
         originalError.apply(console, args);
       };
     }
+
+    // Global error handler for unhandled errors
+    const handleGlobalError = (event) => {
+      console.error('Global error caught:', event.error);
+      // Prevent the error from bubbling up and causing the "Script error"
+      event.preventDefault();
+      return true;
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+    };
   }, []);
 
   return (
@@ -147,17 +609,97 @@ function App() {
             <button onClick={logout} className="logout-button">Logout</button>
           </div>
           <div className="video-container">
-            <YouTube
-              videoId={videoIds[currentVideoIndex]}
-              opts={opts}
-              onReady={onPlayerReady}
-              onStateChange={onPlayerStateChange}
-              onError={onPlayerError}
-            />
+            {isLoadingVideos ? (
+              <div className="loading">
+                개인화된 Shorts를 가져오는 중...
+              </div>
+            ) : (
+              <YouTube
+                key={`video-${currentVideoIndex}`}
+                videoId={videoIds[currentVideoIndex]}
+                opts={opts}
+                onReady={onPlayerReady}
+                onStateChange={onPlayerStateChange}
+                onError={onPlayerError}
+              />
+            )}
+            {videoError && (
+              <div className="video-error">
+                비디오를 로드할 수 없습니다. 다음 비디오로 이동 중...
+              </div>
+            )}
+            {isAutoPlay && isPlaying && (
+              <div className="autoplay-progress-container">
+                <div className="autoplay-indicator">
+                  <div className="autoplay-pulse"></div>
+                </div>
+                <div className="autoplay-text">
+                  🔄 자동재생 중 - 영상 종료 시 자동으로 다음 영상 재생
+                </div>
+              </div>
+            )}
           </div>
+          <div className="category-selector">
+            <button 
+              onClick={() => fetchShortsByCategory('personalized')}
+              className={selectedCategory === 'personalized' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              👤 개인화
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory('trending')}
+              className={selectedCategory === 'trending' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              🔥 트렌딩
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory('funny')}
+              className={selectedCategory === 'funny' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              😂 웃긴
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory('music')}
+              className={selectedCategory === 'music' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              🎵 음악
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory('gaming')}
+              className={selectedCategory === 'gaming' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              🎮 게임
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory('food')}
+              className={selectedCategory === 'food' ? 'active' : ''}
+              disabled={isLoadingVideos}
+            >
+              🍔 음식
+            </button>
+          </div>
+          
           <div className="controls">
             <button onClick={handlePlayPause}>{isPlaying ? '❚❚ Pause' : '▶ Play'}</button>
             <button onClick={handleNextVideo}>Next ▶</button>
+            <button 
+              onClick={toggleAutoPlay}
+              className={`autoplay-button ${isAutoPlay ? 'active' : ''}`}
+            >
+              {isAutoPlay ? '🔄 자동재생 ON' : '⏸️ 자동재생 OFF'}
+            </button>
+            <button 
+              onClick={() => fetchShortsByCategory(selectedCategory)} 
+              disabled={isLoadingVideos}
+              className="refresh-button"
+            >
+              {isLoadingVideos ? '로딩 중...' : '🔄 새로고침'}
+            </button>
           </div>
         </>
       ) : (

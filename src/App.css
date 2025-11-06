@@ -52,6 +52,120 @@
   background-color: #555;
 }
 
+.refresh-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Category selector styles */
+.category-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.category-selector button {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.category-selector button:hover {
+  background-color: #555;
+  transform: translateY(-1px);
+}
+
+.category-selector button.active {
+  background-color: #ff6b6b;
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.category-selector button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Auto-play button styles */
+.autoplay-button {
+  background-color: #666;
+  transition: all 0.3s ease;
+}
+
+.autoplay-button.active {
+  background-color: #4CAF50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.autoplay-button:hover {
+  background-color: #777;
+}
+
+.autoplay-button.active:hover {
+  background-color: #45a049;
+}
+
+/* Auto-play progress indicator */
+.autoplay-progress-container {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 10px 15px;
+  border-radius: 20px;
+  z-index: 10;
+  min-width: 250px;
+  text-align: center;
+}
+
+.autoplay-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 5px;
+}
+
+.autoplay-pulse {
+  width: 12px;
+  height: 12px;
+  background-color: #4CAF50;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+.autoplay-text {
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+}
+
 /* --- Login View Styles --- */
 .login-container {
   display: flex;
@@ -127,4 +241,29 @@
 
 .logout-button:hover {
   background: #777;
+}
+
+/* Loading styles */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 18px;
+  color: #fff;
+}
+
+/* Video error styles */
+.video-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+  z-index: 10;
 }
